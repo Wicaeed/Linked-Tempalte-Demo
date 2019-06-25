@@ -1,0 +1,79 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "NICName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the network card"
+            },
+            "virtualNetworkName": {
+                "type": "string",
+                "metadata": {
+                    "description": "Name of Virtual Network for NIC"
+                }
+            },
+            "subnetName": {
+                "type": "string",
+                "metadata": {
+                    "description": "Name of subnet for NIC"
+                }
+            },
+            "IPAllocationMethod": {
+                "type": "string",
+                "defaultValue": "Dynamic",
+                "allowedValues": [
+                    "Dynamic",
+                    "Static"
+                ]
+            }
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[Concat(parameters('NICName'),'-PIP')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[Concat(parameters('NICName'),'-PIP')]"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "[parameters('IPAllocationMethod')]",
+                "dnsSettings": {
+                    "domainNameLabel": "[Concat(parameters('NICName'),'-PIP')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('NICName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "parameters('NICName')"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', parameters('NICName'),'-PIP')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "[parameters('IPAllocationMethod')]",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName')), '/subnets/',parameters('subnetName'))]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses',Concat(parameters('NICName'),'-PIP'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {}
+}

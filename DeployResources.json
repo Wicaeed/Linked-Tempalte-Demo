@@ -1,0 +1,88 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "URL to location of linked templates"
+            }
+        },
+        "artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "SAS Token to access linked templates"
+            }
+        },
+        "NetworkInterfaceType": {
+            "type": "string",
+            "metadata": {
+                "description": "Whether to have a public or private NIC"
+            },
+            "defaultValue": "Private",
+            "allowedValues": [
+                "Public",
+                "Private"
+            ]
+        }
+    },
+    "variables": {
+        "NetworkName": "lambda-vnet",
+        "Subnet1Name": "lambda-subnet1",
+        "Subnet2Name": "lambda-subnet2"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('NetworkName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "[variables('NetworkName')]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('Subnet1Name')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        }
+                    },
+                    {
+                        "name": "[variables('Subnet2Name')]",
+                        "properties": {
+                            "addressPrefix": "10.0.1.0/24"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "CreateNIC",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2016-09-01",
+            "tags": {
+                "displayName": "CreateNIC"
+            },
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('artifactsLocation'), '/linkedtemplates/CreateNic', parameters('NetworkInterfaceType'), '.json', parameters('artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "NICName": {"value": "LambdaNIC1"},
+                    "virtualNetworkName": {"value": "[variables('NetworkName')]"},
+                    "subnetName": {"value": "[variables('Subnet1Name')]"},
+                    "IPAllocationMethod": {"value": "Dynamic"}
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}
